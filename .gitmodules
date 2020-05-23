@@ -1,3 +1,9 @@
 [submodule "Project/ABSEIR"]
 	path = Project/ABSEIR
 	url = https://github.com/grantbrown/ABSEIR.git
+[submodule "Project/Data/COVID-19"]
+	path = Project/Data/COVID-19
+	url = https://github.com/CSSEGISandData/COVID-19.git
+[submodule "Project/Data/covid-19-data"]
+	path = Project/Data/covid-19-data
+	url = https://github.com/nytimes/covid-19-data.git
