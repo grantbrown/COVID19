@@ -18,7 +18,7 @@ if (have_results){
   } else{
     stop("Failed to copy files")
   }
-  rslt <- system(paste0("git add ", rfldr))
+  rslt <- system(paste0("git add ", rfldr, "/*.html"))
   rslt <- rslt & system("git add ./Results/*.html")
   if (rslt != 0){stop("failed to add files")}
   rslt <- system(paste0("git commit -m \"Adding resuts for ", Sys.Date(), "\"")) 
