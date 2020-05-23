@@ -1,0 +1,99 @@
+---
+title: "Latest COVID-19 Reproductive Number Estimates for Iowa"
+author: "Grant Brown"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Latest EA-RN information for Iowa
+
+```{r, echo = FALSE}
+if (!exists("resultDirectory")){
+  resultDirectory <- "../../Results/"
+}
+
+resultDir <- setdiff(dir(resultDirectory), "placeholder")
+
+maxidx <- which.max(as.Date(resultDir))
+
+rwd <- paste0(resultDirectory, resultDir[maxidx], "/results")
+
+resultFiles <- paste0(rwd,"/", dir(rwd)[grepl("iowa", dir(rwd))])
+analysisResults <- lapply(resultFiles, function(rf){
+  e <- new.env()
+  load(rf, envir = e)
+  e
+})
+
+
+
+R0frame <- Reduce("cbind", lapply(1:length(analysisResults), function(i){
+  sims <- analysisResults[[i]]$single_state_results$result$simulationResults
+  
+  reaOut <- Reduce("cbind", lapply(1:length(sims), function(j){
+    REA <- sims[[j]]$R_EA
+    REA
+  }))
+  
+}))
+
+eps <- Reduce("c", lapply(1:length(analysisResults), function(i){
+  analysisResults[[i]]$single_state_results$result$modelObject$epsilon
+}))
+
+invEps <- 1/eps
+invEps <- invEps/sum(invEps)
+
+sampIdx <- sample(1:length(invEps), size = 1000, prob = invEps, replace = TRUE)
+
+
+R0samp <- R0frame[,sampIdx]
+
+
+#plot(apply(R0samp, 1, median))
+#lines(apply(R0samp, 1, quantile, probs = 0.1))
+#lines(apply(R0samp, 1, quantile, probs = 0.9))
+
+dtobj <- analysisResults[[1]]$single_state_results$data$date
+plot(dtobj, apply(R0samp, 1, function(x){mean(x<1)}), type = "l", lwd = 2, col = "blue",main = "Estimated Probability that Rt < 1\n Based on Statewide Iowa Specific Models", 
+     ylab = "Probability", xlab = "Date")
+
+abline(v=Sys.Date())
+abline(h= seq(0,1,0.05), col = "lightgrey", lty = 2)
+abline(h = c(0,1))
+
+
+```
+
+
+## Where are we right now with R0?
+
+Interventions to control infectious diseases strive to drive the "reproductive number" below 1. While this quantity comes in many forms, and is 
+derived in many ways for different models, in general it captures the number of secondary infections expected per infectious individual. When 
+this number falls below 1, the spread of the disease is expected to slow and stop, while values greater than 1 indicate that the disease is likely to continue to spread exponentially until some other phenomenon interrupts transmission (additional interventions, natural behavioral changes, a lack of susceptible individuals). 
+
+The plot below provides the latest plot estimating our relationship to this threshold. Namely, it estimates the probability that the reproductive number has fallen below 1 at any point during the outbreak in Iowa, and provides a forecast 
+
+The estimated probability that the reproductive number (measured by R-EA) has dropped below 1 as of 
+```{r, results='asis', echo = FALSE}
+cat(as.character(Sys.Date()))
+```
+is 
+```{r, results='asis', echo = FALSE}
+cat(round(apply(R0samp, 1, function(x){mean(x<1)})[which(dtobj == Sys.Date())],3))
+```
+.
+
+Phrased another way, the estimated probability that the reproductive number (measured by R-EA) is still above 1 as of the same date
+is 
+```{r, results='asis', echo = FALSE}
+cat(round(1-apply(R0samp, 1, function(x){mean(x<1)})[which(dtobj == Sys.Date())],3))
+```
+
+## What are the implications for Iowans and policy-makers?
+
+When this value is above one, it means that measures currently taken to combat the infection have not been sufficient. Certainly, the picture is more complex than a single number, but the state is sufficiently interconnected that we certainly expect continued spread of increasing rapdity, even in the absence of any measures to "reopen" the state. Even though much of the recent spread in Iowa has been attributed to clusters (e.g., workplaces, LTC facilities), there is little reason to expect that this will prevent community spread. 

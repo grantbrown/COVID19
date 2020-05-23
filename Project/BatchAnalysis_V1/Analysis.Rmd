@@ -1,0 +1,423 @@
+---
+title: "COVID-19 In Iowa - Daily Report"
+author: "Grant Brown"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=FALSE,results='hide',message=FALSE}
+suppressPackageStartupMessages({
+  suppressWarnings({
+    library(ABSEIR)
+    library(ggplot2)
+    library(knitr)
+    library(dplyr)
+    library(openxlsx)
+    library(splines)
+  })
+})
+
+getCommitVersion <- function(dirname){
+  cwd <- getwd()
+  tryCatch({
+    setwd(dirname)
+    logdat <- system("git log", intern = TRUE)[1]
+    out <- substr(logdat, 8, 14)
+  }, error = function(e){
+    out = "NA"
+  },finally = {
+    setwd(cwd)  
+  })
+  return(out)
+}
+
+# Compile baseline models
+debug <- FALSE
+cores <- parallel::detectCores() - 1
+current_date <- as.character(Sys.Date())
+JH_version <- getCommitVersion("../Data/COVID-19/")
+NYT_version <- getCommitVersion("../Data/covid-19-data/")
+
+d1 <- read.csv("../Data/COVID-19/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv")
+d2 <- read.csv("../Data/covid-19-data/us-states.csv")
+
+
+md1 <- as.character(as.Date(gsub("X", "", colnames(d1)[length(colnames(d1))]), format = "%m.%d.%y"))
+md2 <- as.character(max(as.Date(as.character(d2$date))))
+
+
+
+```
+
+<h4>Report Compiled: 
+```{r, echo = FALSE, results='asis'}
+cat(current_date, "\n")
+```
+</h4>
+
+<h4> Johns Hopkins Repo Commit: 
+```{r, echo = FALSE, results='asis'}
+cat(" ", JH_version, " Max Data Date: ", md1,"\n")
+```
+</h4>
+
+
+<h4> NYT Repo Commit: 
+```{r, echo = FALSE, results='asis'}
+cat(" ", NYT_version, " Max Data Date: ", md2,"\n")
+```
+</h4>
+
+
+This is an automatically generated report containing analyses of the COVID-19 epidemic in Iowa and elsewhere. All models under consideration here are stochastic SEIR compartmental models, fit using Approximate Bayesian Computation using the [ABSEIR](https://github.com/grantbrown/ABSEIR) software for R. Source code available upon request. Questions should be directed to `grant-brown@uiowa.edu`
+
+There are two general classes of model:
+
+1. Models which use a single location of mortality data to estimate the epidemic curves
+2. Models which are used to provide informative prior information about the epidemic in Iowa, based on analyses of other locations. 
+
+In both cases, we have to make assumptions about the shape of the underlying contact distributions. Namely, can we assume that contact in each location shifted within one week of governmental action, or is the shape of the curve more complex. With that in mind, we look at both types of models. In addition, for the State of Iowa, we consider whether or not it is most reasonable to assume that intervention efforts began on 3-17-2020 or 4-4-2020, which correspond to the emergency declaration and the official closing of schools. 
+
+** A huge array of models are presented in this document, and they are not reviewed by our team of experts before posting to this page. Some of these are guaranteed to be inadequate or misleading if interpreted by themselves. These results should be considered raw material for follow-up reporting, investigation, and decision-making.** 
+
+```{r, echo=FALSE,results='hide',message=FALSE}
+## Single Intervention Basis
+
+# Illinois
+system(paste0("Rscript AnalyzeNYT.R -s 14 -r 0.02 -w 6 -d 2020-03-17 -t 4 -o ./results/illinois.rmd -b ", debug*1, " -z ", cores))
+
+# Washington
+system(paste0("Rscript AnalyzeNYT.R -s 48 -r 0.02 -w 6 -d 2020-03-13 -t 4 -o ./results/washington.rmd -b ", debug*1, " -z ", cores))
+
+# New York
+system(paste0("Rscript AnalyzeNYT.R -s 33 -r 0.02 -w 6 -d 2020-03-21 -t 4 -o ./results/newyork.rmd -b ", debug*1, " -z ", cores))
+  
+# Minnesota
+system(paste0("Rscript AnalyzeNYT.R -s 24 -r 0.02 -w 6 -d 2020-03-27 -t 4 -o ./results/minnesota.rmd -b ", debug*1, " -z ", cores))
+  
+# Iowa
+system(paste0("Rscript AnalyzeNYT.R -s 16 -r 0.02 -w 6 -d 2020-03-17 -t 4 -o ./results/iowa.rmd -b ", debug*1, " -z ", cores))
+  
+# Iowa
+system(paste0("Rscript AnalyzeNYT.R -s 16 -r 0.02 -w 6 -d 2020-04-04 -t 4 -o ./results/iowa_4_4.rmd -b ", debug*1, " -z ", cores))
+
+
+## Spline basis
+
+# Illinois
+system(paste0("Rscript AnalyzeNYT.R -s 14 -r 0.02 -w 6 -d 2020-03-17 -t 5 -o ./results/illinois_spline.rmd -b ", debug*1, " -z ", cores))
+
+# Washington
+system(paste0("Rscript AnalyzeNYT.R -s 48 -r 0.02 -w 6 -d 2020-03-13 -t 5 -o ./results/washington_spline.rmd -b ", debug*1, " -z ", cores))
+
+# New York
+#system(paste0("Rscript AnalyzeNYT.R -s 33 -r 0.02 -w 6 -d 2020-03-21 -t 5 -o ./results/newyork_spline.rmd -b ", debug*1, " -z ", cores))
+  
+# Minnesota
+system(paste0("Rscript AnalyzeNYT.R -s 24 -r 0.02 -w 6 -d 2020-03-27 -t 5 -o ./results/minnesota_spline.rmd -b ", debug*1, " -z ", cores))
+  
+# Iowa
+system(paste0("Rscript AnalyzeNYT.R -s 16 -r 0.02 -w 6 -d 2020-03-17 -t 5 -o ./results/iowa_spline.rmd -b ", debug*1, " -z ", cores))
+  
+# Iowa
+system(paste0("Rscript AnalyzeNYT.R -s 16 -r 0.02 -w 6 -d 2020-04-04 -t 5 -o ./results/iowa_4_4_spline.rmd -b ", debug*1, " -z ", cores))
+  
+```
+
+## R0 Summaries: Single Location Analyses
+
+```{r, echo = FALSE}
+
+#locations <- c("Hubei", "Norway", "Illinois", "Washington", "New York", "Minnesota", "Iowa")
+#files <- paste0("./results/", c("hubei.rmd", "norway.rmd", "illinois.rmd", "washington.rmd", "newyork.rmd", "minnesota.rmd", "iowa.rmd"))
+
+locations <- c("Illinois", "Washington", "Minnesota", "Iowa (3-17)", "Iowa (4-4)",
+               "Illinois (Spline Model)", "Washington (Spline Model)", "Minnesota (Spline Model)", "Iowa (3-17, Spline Model)", "Iowa (4-4, Spline Model)")
+files <- paste0("./results/", c("illinois.rmd", 
+                                "washington.rmd",
+                                "minnesota.rmd", 
+                                "iowa.rmd", 
+                                "iowa_4_4.rmd",
+                                "illinois_spline.rmd", 
+                                "washington_spline.rmd",
+                                "minnesota_spline.rmd", 
+                                "iowa_spline.rmd", 
+                                "iowa_4_4_spline.rmd"))
+intervTypes <- c(rep(4,5), rep(5,5))
+
+preanalyses <- lapply(1:length(locations), function(i){
+  e <- new.env()
+  e$target_location <- locations[i]
+  load(files[[i]], envir = e)
+  e
+})
+
+names(preanalyses) <- locations
+
+
+coefficients <- Reduce("rbind", lapply(1:length(locations), function(i){
+  result <- preanalyses[[i]]$single_state_results$result
+  pname <- intersect(c("param.samples", "params"), names(result))[1]
+  out <- data.frame(preanalyses[[i]]$single_state_results$result[[pname]][,1:2])
+  out$location <- locations[i]
+  out
+}))
+
+
+#boxplot(coefficients$Beta_SE_1 ~ coefficients$location)
+
+R0frame <- Reduce("rbind", lapply(1:length(locations), function(i){
+  sims <- preanalyses[[i]]$single_state_results$result$simulationResults
+  
+  Reduce("rbind", lapply(1:length(sims), function(j){
+    REA <- sims[[j]]$R_EA
+    data.frame(R_EA = mean(REA[1:7]), location = locations[i])
+  }))
+}))
+
+
+#boxplot(R_EA ~ location2, data = R0frame)
+lv <- as.character((group_by(R0frame, location) %>% summarize(meanR0 = mean(R_EA)) %>% arrange(desc(meanR0)))$location)
+R0frame$location2 <- ordered(R0frame$location, levels = lv)
+
+
+p<-ggplot(R0frame, aes(x=location2, y=R_EA, color=location2)) +
+  geom_boxplot() + xlab("Location") + ylab("EA-RN") + ggtitle("Empirically Adjusted Reproductive Number by Location:\n Beginning of Epidemic") + 
+  labs(color = "Location") + geom_abline(slope = 0, intercept = 1) +theme(axis.text.x = element_text(angle = 90, hjust = 0,vjust = 0))
+p
+```
+
+
+## Mortality Estimates: Single Location Analyses
+
+Here, we present the compared results of analyses of the COVID-19 outbreak in a number of locations. We begin by comparing the estimated posterior distribution of mortality rates in each location.
+
+```{r, echo= FALSE}
+
+getResultSummary <- function(rslt, parname, f, ...){
+  parmatrixname <- intersect(c("param.samples", "params"), names(rslt))[1]
+  idx <- which(colnames(rslt[[parmatrixname]]) == parname)
+  f(rslt$params[,idx], ...)
+}
+
+mortality <- Reduce("rbind", lapply(1:length(preanalyses), function(i){
+  data.frame(rf = getResultSummary(preanalyses[[i]]$single_state_results$result, "report_fraction", f=c),
+             location = locations[i])
+}))
+
+
+#boxplot(R_EA ~ location2, data = R0frame)
+lv <- as.character((group_by(mortality, location) %>% summarize(meanM = mean(rf)) %>% arrange(desc(meanM)))$location)
+mortality$location2 <- ordered(mortality$location, levels = lv)
+
+p<-ggplot(mortality, aes(x=location2, y=rf, color=location2)) +
+  geom_boxplot() + xlab("Location") + ylab("Mortality Rate") + ggtitle("Estimated Proportion of Fatal Cases") + labs(color = "Location") +theme(axis.text.x = element_text(angle = 90, hjust = 0,vjust = 0))
+p
+
+```
+
+
+## Model Fit: Single Location Analyses  {.tabset}
+
+In the following tabbed sections, we present diverse output from the single location models, including projections over time of the following important quantities:
+
+* Cumulative mortality
+* Counts of newly infectious individuals
+* Estimated Empirically Adjusted Reproductive Numbers 
+
+```{r, echo = FALSE, results='asis'}
+
+
+plotPosteriorPredictive = function(sim_obj, dat, intv, parName, useRF=FALSE, 
+                                   finish = function(){},maxT = NA,
+                                   heightQtile= 0.8,
+                                   ...)
+{
+  
+  allSimulated <-  sapply(sim_obj$simulationResults,
+                          function(x){(x[[parName]])})
+  if (useRF){
+    rf <- getResultSummary(sim_obj,parname = "report_fraction", f = c)
+    allSimulated <- allSimulated*matrix(rf, nrow = nrow(allSimulated),
+                                        ncol = ncol(allSimulated), byrow = TRUE)
+  }
+  
+  
+  if (class(maxT) != "logical"){
+    allSimulated <- allSimulated[1:maxT,]
+  } else{
+    maxT <- nrow(allSimulated)
+  }
+  
+  Nt <- dim(allSimulated)[1]
+  
+  upperMQuantile = apply(allSimulated, 1, quantile, probs = c(heightQtile))
+
+  if (length(dat$date[1:maxT]) == Nt){
+    dateObj <- dat$date[1:maxT]
+  } else {
+    dateObj <- 1:Nt
+  }
+  
+  layout(mat = matrix(c(1,2), nrow = 1), widths = c(8,2), heights = c(6,6))
+  plot(dateObj, 1:Nt, 
+       ylim = c(0, max(upperMQuantile)), type = "n",
+       ...)
+  
+  #gridV <- (ceiling(seq(0, par("usr")[4], length = 20)/10)*10)[2]
+  ymax <- (round(par("usr")[4]))
+  gridV <- as.numeric(
+    paste0(c("1", rep("0", nchar(as.character(ymax)) - 1)), 
+           collapse = ""))
+  while (ymax/gridV < 5){
+    gridV <- gridV/2  
+  }
+  
+  
+  #qtls <- seq(0.025, 0.975, length = 10)
+  qtls <- c(0.025,0.1,0.25,0.5,0.75,0.9, 0.975)
+  qtlwd <- 3-2*sqrt(abs(qtls - 0.5))
+  qtlty <- c(4,3,2,1,2,3,4)
+  qtalpha <- 1-sqrt(abs(qtls - 0.5))
+  qtcol <- rgb(0,0,1,qtalpha)
+  
+  for (i in 1:length(qtls)){
+    qtileCurve = apply(allSimulated, 1, quantile, probs = qtls[i])
+    lines(dateObj, qtileCurve, lty = qtlty[i], lwd = qtlwd[i], 
+          col = qtcol[i])
+  }
+  qtileMCurve = apply(allSimulated, 1, quantile, probs = c(0.5))
+  lines(dateObj, qtileMCurve, lty = 1, lwd = 3, col = rgb(0,0,1,1))
+    
+  
+  abline(v = dateObj[intv], lty= 2, col = "red")
+  abline(v = Sys.Date(), lty = 2, col = "green")
+
+  abline(h = seq(0, max(allSimulated), gridV), col = "lightgrey", lty = 2)
+  finish()
+  
+  ## Add Legend
+  
+  par(xpd = TRUE)
+  par(bty = "n")
+  par(xaxt = "n")
+  par(yaxt = "n")
+  
+  
+  plot(0,0,xlim = c(0,2), ylim = c(0,6), type = "n",
+       xlab = "", ylab = "", main = "")
+  legend(x = 0, y = 3, legend = rev(as.character(qtls)), 
+         lty = qtlty,lwd = qtlwd, col = qtcol,
+         xjust = 0.5,
+         yjust = 0.5)
+  
+  par(yaxt = "s")
+  par(xaxt = "s")
+  par(bty = "o")
+  par(xpd = FALSE)
+  return(allSimulated)
+}
+
+
+
+#locs <- sapply(preanalyses, function(x){x$single_state_results$location})
+
+for (i in 1:length(preanalyses)){
+  
+  train_results <- preanalyses[[i]]$single_state_results$result
+  dat <- preanalyses[[i]]$single_state_results$data
+  loc <- locations[[i]]
+  cat("\n\n### ", loc, "\n\n")
+  
+  intv <- min(which(preanalyses[[i]]$single_state_results$result$modelObject$modelComponents$exposure_model$X[,2] > 0))
+  rf = getResultSummary(preanalyses[[i]]$single_state_results$result,parname = "report_fraction", f = c)
+  cmrslt <- plotPosteriorPredictive(sim_obj = train_results, 
+                                    dat, 
+                                    intv, 
+                                    parName = "R", 
+                                    useRF = TRUE, 
+                                    maxT = min(which(dat$date>=Sys.Date() + 14)),
+                                    main = paste0("Projected Cumulative Deaths: \n", loc),
+                                    xlab = "Date", 
+                                    ylab = "COVID Mortality", 
+                                    finish = function(){
+                          obs.mortality <- cumsum(
+                            train_results$modelObject$modelComponents$data_model$Y
+                          )
+                          points(x = dat$date,
+                                 y =  obs.mortality)                        
+                        })
+  out <- data.frame(Location = loc, Date = as.character(Sys.Date() + 14), 
+                    Training = preanalyses[[i]]$single_state_results$location,
+                    Intervention = intv, modelType = preanalyses[[i]]$target_location, call = 1,stringsAsFactors = FALSE)
+  qtls <- quantile(cmrslt[nrow(cmrslt),], probs = c(0.1,0.5,0.9))
+  out$`10%` <- qtls[1]
+  out$`50%` <- qtls[2]
+  out$`90%` <- qtls[3]
+  
+  k <- sum(grepl("Mortality", names(preanalyses[[i]]))) + 1
+  
+  preanalyses[[i]][[paste0(c("Mortality-",as.character(Sys.Date() + 14), "-", k, "-", loc), collapse = "")]] <- out
+    
+  
+  cmrslt <- plotPosteriorPredictive(sim_obj = train_results, 
+                                    dat, intv, parName = "R",  useRF = TRUE, 
+                                    main = paste0("Projected Cumulative Deaths: \n", loc),
+                                    xlab = "Date", 
+                                    ylab = "COVID Mortality", 
+                        finish = function(){
+                          obs.mortality <- cumsum(
+                            train_results$modelObject$modelComponents$data_model$Y
+                          )
+                          points(x = dat$date,
+                                 y =  obs.mortality)                        
+                        })
+  
+  
+  out <- data.frame(Location = loc, Date = as.character(max(dat$date)),
+                    Training=preanalyses[[i]]$single_state_results$location,
+                    Intervention = intv, modelType = preanalyses[[i]]$target_location,call=2, stringsAsFactors = FALSE)
+  qtls <- quantile(cmrslt[nrow(cmrslt),], probs = c(0.1,0.5,0.9))
+  out$`10%` <- qtls[1]
+  out$`50%` <- qtls[2]
+  out$`90%` <- qtls[3]
+  
+  k <- sum(grepl("Mortality", names(preanalyses[[i]]))) + 1
+  
+  preanalyses[[i]][[paste0(c("Mortality-",as.character(max(dat$date)), "-", k, "-", loc), collapse = "")]] <- out
+    
+  #kable(quantile(cmrslt[nrow(cmrslt),], probs = c(0.1,0.5,0.9)))
+  ###
+  plotPosteriorPredictive(train_results,
+                          dat = dat, intv = intv, 
+                          parName = "I", 
+                          main = "Estimated Concurrent Infectious", 
+                          xlab = "Date", ylab = "Infectious")
+  
+  i0 = getResultSummary(preanalyses[[i]]$single_state_results$result,
+                        parname = "I0_1", f= c)
+  istr <- plotPosteriorPredictive(train_results, dat = dat, intv = intv, 
+                          parName = "I_star", 
+                          main = "New Daily Infectious Individuals", xlab = "Date", ylab = "New Infectious")
+  
+  totalI <- apply(rbind(i0, istr), 2, sum)
+  #median(totalI)
+  
+  plotPosteriorPredictive(train_results, dat = dat, intv = intv, 
+                          parName = "E_star", main = "New Daily Infections", xlab = "Date", ylab = "New Infections")
+  plotPosteriorPredictive(train_results,
+                          dat = dat, intv = intv, 
+                          parName = "R_EA", 
+                          main = "Empirically Adjusted Reproductive Number", 
+                          xlab = "Date", ylab = "Reproductive Number", finish = function(){abline(h=1, lty = 2)})
+  
+}
+  
+  
+
+
+```
+

@@ -1,0 +1,425 @@
+---
+title: "Latest Statewide COVID-19 Reproductive Number Estimates and Projections for Iowa"
+author: "Grant Brown"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r, echo = FALSE}
+suppressMessages({
+library(knitr)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+})
+
+
+
+resultDirectory <- "../../Results/"
+resultDir <- setdiff(dir(resultDirectory), "placeholder")
+
+## Determine if we're supposed to be working in a specific folder, or grabbing the latest
+if (!exists("resultsDirectoryName")){
+  maxidx <- which.max(as.Date(resultDir))
+  rprtDate <- max(as.Date(resultDir), na.rm = TRUE)
+  resultsDirectoryName <- paste0(resultDirectory, resultDir[maxidx], "/results")
+} else{
+  rprtDate <- as.Date(resultsDirectoryName)
+  resultsDirectoryName <- paste0(resultDirectory, resultsDirectoryName, "/results")
+}
+
+maxPredDate <- max( rprtDate + 30, as.Date("2020-06-01"))
+
+resultFiles <- paste0(resultsDirectoryName,"/", dir(resultsDirectoryName)[grepl("iowa", dir(resultsDirectoryName))])
+analysisResults <- lapply(resultFiles, function(rf){
+  e <- new.env()
+  load(rf, envir = e)
+  e
+})
+```
+
+```{r,echo=FALSE, results='asis'}
+
+cat(paste0("<h1>Using report compiled on: ", rprtDate, "</h1>\n"))
+```
+
+## Introduction
+
+This automatically generated report captures the changes in one of our approaches to COVID modelling in Iowa. The team at the University of Iowa has provided a number of white-papers to the Iowa Department of Public Health, including:
+
+1. An assessment of the IHME model for IDPH: [(link)](https://governor.iowa.gov/documents/idph-white-paper-1)
+2. Initia, Iowa-specific models, submitted April 20, 2020: [(link)](https://governor.iowa.gov/documents/idph-white-paper-2)
+3. Clarifications of appropriate use of symptom onset data, submitted April 27, 2020 [(link)](https://www.bleedingheartland.com/static/media/2020/05/Understanding-the-Current-Epidemic-from-Dates-of-Symptom-Onset.pdf)
+4. Update on Iowa-specific model M2, submitted May 04, 2020: [(link)](http://media.graytvinc.com/documents/IDPH+Whitepaper++-+Update+on+the+Current+COVID-19+Situation+in+the+State+of+Iowa.pdf)
+
+This specific report concerns model M2 from the April 20 and May 04 whitepapers, and is constructed using entirely public information. Given the sensitivity of these models to prior assumptions, and the data used, results may not preciesly concord with models used for other purposes or constructed under different conditions. The information presented here is intended to supplement, not replace, official guidance on COVID-19 from reputable public health organizations:
+
+1. [IDPH](https://coronavirus.iowa.gov/)
+2. [CDC](https://www.cdc.gov/coronavirus/2019-ncov/index.html)
+3. [WHO](https://www.who.int/emergencies/diseases/novel-coronavirus-2019)
+
+We're also not the only group producing Iowa-specific forecasts. You may also be interested in the following projects:
+
+1. [IHME](https://covid19.healthdata.org/united-states-of-america/iowa)
+2. [Reich Lab](https://reichlab.io/covid19-forecast-hub/)
+
+
+### Reproductive Numbers
+
+Interventions to control infectious diseases strive to drive the "reproductive number" below 1. While this quantity comes in many forms, and is 
+derived in many ways for different models, in general it captures the number of secondary infections expected per infectious individual. When 
+this number falls below 1, the spread of the disease is expected to slow and stop, while values greater than 1 indicate that the disease is likely to continue to spread exponentially until some other phenomenon interrupts transmission (additional interventions, natural behavioral changes, a lack of susceptible individuals). 
+
+The plot below provides the latest plot estimating our relationship to this threshold. Namely, it estimates the probability that the reproductive number has fallen below 1 at any point during the outbreak in Iowa, and provides a forecast 
+
+### Mortality Projections
+
+The models used here are trained on publicly available mortality data - as such, predicting mortality is one of their principal uses. In this document, we present the latest statewide projections, as well as a comparison to the official May-02 report to see how the predictions have evolved over time (where appropriate).
+
+# {.tabset}
+
+## Latest Results {.tabset}
+
+These results are based on the most recently available models (generally 1-2 days out of date)
+
+### Latest EA-RN information for Iowa 
+
+
+```{r, echo=FALSE}
+
+
+R0frame <- Reduce("cbind", lapply(1:length(analysisResults), function(i){
+  sims <- analysisResults[[i]]$single_state_results$result$simulationResults
+  
+  reaOut <- Reduce("cbind", lapply(1:length(sims), function(j){
+    REA <- sims[[j]]$R_EA
+    REA
+  }))
+  
+}))
+
+eps <- Reduce("c", lapply(1:length(analysisResults), function(i){
+  analysisResults[[i]]$single_state_results$result$modelObject$epsilon
+}))
+
+invEps <- 1/eps
+invEps <- invEps/sum(invEps)
+
+sampIdx <- sample(1:length(invEps), size = 1000, prob = invEps, replace = TRUE)
+
+
+R0samp <- R0frame[,sampIdx]
+
+
+dtobj <- analysisResults[[1]]$single_state_results$data$date
+
+R0bounds <- apply(R0samp, 1, quantile, probs = c(0.1, 0.25, 0.5,0.75,0.9))
+
+
+out <- data.frame(date = dtobj, q1 = R0bounds[1,], 
+                  q25 = R0bounds[2,],
+                  q5 = R0bounds[3,], 
+                  q75 = R0bounds[4,],
+                  q9 = R0bounds[5,],
+                  Observed =  analysisResults[[1]]$single_state_results$data$deaths)
+
+outFilt <- out[ out$date <= maxPredDate,]
+
+p1 <- ggplot(data = outFilt, aes(x=date, y = q5)) + 
+  geom_line(color="blue") + 
+  geom_vline(xintercept = as.Date("2020-06-01")) + 
+  geom_ribbon(aes(ymin = q1, ymax=q9), 
+              linetype = 2, alpha = 0.05, size = 2) +
+  geom_ribbon(aes(ymin = q25, ymax=q75), 
+              linetype = 2, alpha = 0.15, size = 2) +
+  ylab("R-EA") + xlab("Date") + 
+  ggtitle("Reproductive Number")+ 
+  ggtitle("Reproductive Number - Current Estimates and Projections\n 50% and 80% Intervals")+  
+  geom_hline(yintercept = 1,linetype = "dashed", color = "black", size = 1)+
+  theme_light()
+p1
+```
+
+### Latest Projected Mortality
+
+```{r, echo = FALSE}
+## Get mortality projections 
+
+Mortalityframe <- Reduce("cbind", lapply(1:length(analysisResults), function(i){
+  sims <- analysisResults[[i]]$single_state_results$result$simulationResults
+  
+YOut <- Reduce("cbind", lapply(1:length(sims), function(j){
+    pi_R <- analysisResults[[i]]$single_state_results$result$params[j,]
+    pi_R <- pi_R[names(pi_R) == "report_fraction"]
+    deaths <- sims[[j]]$R_star*pi_R
+    deaths
+  }))
+  YOut
+}))
+
+eps <- Reduce("c", lapply(1:length(analysisResults), function(i){
+  analysisResults[[i]]$single_state_results$result$modelObject$epsilon
+}))
+
+invEps <- 1/eps
+invEps <- invEps/sum(invEps)
+
+sampIdx <- sample(1:length(invEps), size = 1000, prob = invEps, replace = TRUE)
+
+
+MortalityframeSamp <- Mortalityframe[,sampIdx]
+
+MortalityframeSamp <- apply(MortalityframeSamp, 2, cumsum)
+
+
+
+dtobj <- analysisResults[[1]]$single_state_results$data$date
+may1Idx <- which(dtobj == "2020-05-01")
+mortalityQuantiles <- apply(MortalityframeSamp, 1, quantile, probs = c(0.1,0.25, 0.5,0.75,0.9))
+
+
+out <- data.frame(date = dtobj, q1 = mortalityQuantiles[1,], 
+                  q25 = mortalityQuantiles[2,],
+                  q5 = mortalityQuantiles[3,], 
+                  q75 = mortalityQuantiles[4,],
+                  q9 = mortalityQuantiles[5,],
+                  Observed =  analysisResults[[1]]$single_state_results$data$deaths)
+outFilt <- out[out$date >= as.Date("2020-04-01") &
+                 out$date <= maxPredDate,]
+
+outFilt.latest <- outFilt
+
+p1 <- ggplot(data = outFilt, aes(x=date, y = q5)) + 
+  geom_vline(xintercept = as.Date("2020-06-01")) +
+  geom_point(x = outFilt$date, y = outFilt$Observed) + 
+  geom_line(color="blue") + 
+  geom_ribbon(aes(ymin = q1, ymax=q9), 
+              linetype = 2, alpha = 0.05, size = 2) +
+  geom_ribbon(aes(ymin = q25, ymax=q75), 
+              linetype = 2, alpha = 0.15, size = 2) +
+  ylab("Cumulative Mortality") + xlab("Date") + 
+  ggtitle("Six Week Cumulative Mortality")+ 
+ 
+  ggtitle("Projected Cumulative Mortality\n 50% and 80% Intervals") +  
+  theme_light()
+
+suppressWarnings(
+  print(p1)
+)
+
+
+p2 <- ggplot(data = outFilt, aes(x=date, y = q5))+  scale_y_continuous(trans='log10') + 
+  geom_line(color="blue") + 
+  geom_vline(xintercept = as.Date("2020-06-01")) +
+  geom_point(x = outFilt$date, y = log10(outFilt$Observed) )+
+  geom_ribbon(aes(ymin = outFilt$q1, ymax=outFilt$q9), 
+              linetype = 2, alpha = 0.05, size = 2) +
+  geom_ribbon(aes(ymin = outFilt$q25, ymax=outFilt$q75), 
+              linetype = 2, alpha = 0.15, size = 2) +
+  ylab("Cumulative Mortality") + xlab("Date") + 
+  ggtitle("Projected Cumulative Mortality\n (log10 scale)")+  
+  theme_light() 
+
+suppressWarnings(
+  print(p2)
+)
+
+library(knitr)
+out.ToPrint <- data.frame(Date = out$date, `Observed Cumulative Mortality` = out$Observed, `Median Fitted/Predicted Mortality` = out$q5, 
+                          `Fitted/Predicted LB` = out$q1, `Fitted/Predicted UB` = out$q9) %>% filter(Date <= as.Date("2020-06-01"))
+
+kable(out.ToPrint, digits = 1)
+
+```
+
+## Comparison to May 02 Report {.tabset}
+ 
+These results are reproduced from the models included in the May 02 report using model M2. The mortality projections are compared to the
+subsequently reported counts. 
+
+### Reproductive Number Projections 
+
+```{r, echo=FALSE}
+if (rprtDate == as.Date("2020-05-02")){
+  cat("<strong>Comparison omitted - report date is the same as the comparison report.</strong>") 
+}else if (rprtDate > as.Date("2020-06-01")){
+  cat("<strong>Comparison omitted - report date is past June 01 and comparison is not meaningful.</strong>") 
+} else if (rprtDate <= as.Date("2020-06-01")){
+  
+resultDirectory <- "../../Results/2020-05-02/results/"
+rwd <- resultDirectory 
+
+resultFiles <- paste0(rwd,"/", dir(rwd)[grepl("iowa", dir(rwd))])
+analysisResults <- lapply(resultFiles, function(rf){
+  e <- new.env()
+  load(rf, envir = e)
+  e
+})
+
+
+
+
+R0frame <- Reduce("cbind", lapply(1:length(analysisResults), function(i){
+  sims <- analysisResults[[i]]$single_state_results$result$simulationResults
+  
+  reaOut <- Reduce("cbind", lapply(1:length(sims), function(j){
+    REA <- sims[[j]]$R_EA
+    REA
+  }))
+  
+}))
+
+eps <- Reduce("c", lapply(1:length(analysisResults), function(i){
+  analysisResults[[i]]$single_state_results$result$modelObject$epsilon
+}))
+
+invEps <- 1/eps
+invEps <- invEps/sum(invEps)
+
+sampIdx <- sample(1:length(invEps), size = 1000, prob = invEps, replace = TRUE)
+
+
+R0samp <- R0frame[,sampIdx]
+
+
+dtobj <- analysisResults[[1]]$single_state_results$data$date
+dtIdx <- max(which(is.finite(analysisResults[[1]]$single_state_results$result$modelObject$modelComponents$data_model$Y)))
+
+R0bounds <- apply(R0samp, 1, quantile, probs = c(0.1, 0.25, 0.5,0.75,0.9))
+
+
+out <- data.frame(date = dtobj, q1 = R0bounds[1,], 
+                  q25 = R0bounds[2,],
+                  q5 = R0bounds[3,], 
+                  q75 = R0bounds[4,],
+                  q9 = R0bounds[5,],
+                  Observed =  analysisResults[[1]]$single_state_results$data$deaths)
+outFilt <- out[out$date >= as.Date("2020-04-01") &
+                 out$date <= as.Date("2020-06-01"),]
+p1 <- ggplot(data = outFilt, aes(x=date, y = q5)) + 
+  geom_line(color="blue") + 
+  geom_vline(xintercept = as.Date("2020-06-01")) +
+  geom_ribbon(aes(ymin = q1, ymax=q9), 
+              linetype = 2, alpha = 0.05, size = 2) +
+  geom_ribbon(aes(ymin = q25, ymax=q75), 
+              linetype = 2, alpha = 0.15, size = 2) +
+  ylab("R-EA") + xlab("Date") + 
+  ggtitle("Reproductive Number")+ 
+  ggtitle("Reproductive Number - Status Quo\n 50% and 80% Intervals")+  
+  geom_hline(yintercept = 1,linetype = "dashed", color = "black", size = 1)+
+  theme_light()
+suppressWarnings({
+  print(p1)
+})
+}
+
+
+
+```
+
+### Mortality Projections
+
+
+```{r,echo=FALSE}
+
+## Get mortality projections 
+if (rprtDate == as.Date("2020-05-02")){
+  cat("<strong>Comparison omitted - report date is the same as the comparison report.</strong>") 
+}else if (rprtDate > as.Date("2020-06-01")){
+  cat("<strong>Comparison omitted - report date is past June 01 and comparison is not meaningful.</strong>") 
+} else if (rprtDate <= as.Date("2020-06-01")){
+  
+Mortalityframe <- Reduce("cbind", lapply(1:length(analysisResults), function(i){
+  sims <- analysisResults[[i]]$single_state_results$result$simulationResults
+  
+YOut <- Reduce("cbind", lapply(1:length(sims), function(j){
+    pi_R <- analysisResults[[i]]$single_state_results$result$params[j,]
+    pi_R <- pi_R[names(pi_R) == "report_fraction"]
+    deaths <- sims[[j]]$R_star*pi_R
+    deaths
+  }))
+  YOut
+}))
+
+eps <- Reduce("c", lapply(1:length(analysisResults), function(i){
+  analysisResults[[i]]$single_state_results$result$modelObject$epsilon
+}))
+
+invEps <- 1/eps
+invEps <- invEps/sum(invEps)
+
+sampIdx <- sample(1:length(invEps), size = 1000, prob = invEps, replace = TRUE)
+
+
+MortalityframeSamp <- Mortalityframe[,sampIdx]
+
+MortalityframeSamp <- apply(MortalityframeSamp, 2, cumsum)
+
+
+
+dtobj <- analysisResults[[1]]$single_state_results$data$date
+may1Idx <- which(dtobj == "2020-05-01")
+mortalityQuantiles <- apply(MortalityframeSamp, 1, quantile, probs = c(0.1,0.25, 0.5,0.75,0.9))
+
+
+out <- data.frame(date = dtobj, q1 = mortalityQuantiles[1,], 
+                  q25 = mortalityQuantiles[2,],
+                  q5 = mortalityQuantiles[3,], 
+                  q75 = mortalityQuantiles[4,],
+                  q9 = mortalityQuantiles[5,],
+                  Observed =  analysisResults[[1]]$single_state_results$data$deaths)
+outFilt <- out[out$date >= as.Date("2020-04-01") & 
+                out$date <= as.Date("2020-06-01"),]
+outFilt.latest.sub <- filter(outFilt.latest, date %in% outFilt$date)
+if (!all(outFilt.latest.sub$date == outFilt$date)){
+  stop("Date Comparison is broken")
+}
+pred <- is.na(outFilt$Observed) & !is.na(outFilt.latest.sub$Observed)
+
+outFilt$Observed <- outFilt.latest.sub$Observed
+
+cols <- c("black", "red")
+p1 <- ggplot(data = outFilt, aes(x=date, y = q5)) + 
+  geom_vline(xintercept = as.Date("2020-06-01")) +
+  geom_line(color="blue") + 
+  geom_vline(xintercept = outFilt$date[min(which(pred))-1]) +
+  geom_ribbon(aes(ymin = outFilt$q1, ymax=outFilt$q9), 
+              linetype = 2, alpha = 0.05, size = 2) +
+  geom_ribbon(aes(ymin = outFilt$q25, ymax=outFilt$q75), 
+              linetype = 2, alpha = 0.15, size = 2) +
+  ylab("Cumulative Mortality") + xlab("Date") + 
+  ggtitle("Six Week Cumulative Mortality")+ 
+  geom_point(x = outFilt$date, y = outFilt$Observed, color = cols[pred+1]) + 
+  ggtitle("Projected Cumulative Mortality\n 50% and 80% Intervals")+
+  theme_light()
+
+
+p2 <- ggplot(data = outFilt, aes(x=date, y = q5))+  scale_y_continuous(trans='log10') + 
+  geom_line(color="blue") +
+  geom_vline(xintercept = outFilt$date[min(which(pred))-1]) +
+  geom_point(x = outFilt$date, y = log10(outFilt$Observed) , color = cols[pred+1])+
+  geom_ribbon(aes(ymin = outFilt$q1, ymax=outFilt$q9), 
+              linetype = 2, alpha = 0.05, size = 2) +
+  geom_ribbon(aes(ymin = outFilt$q25, ymax=outFilt$q75), 
+              linetype = 2, alpha = 0.15, size = 2) +
+  ylab("Cumulative Mortality") + xlab("Date") + 
+  ggtitle("Projected Cumulative Mortality\n (log10 scale)")+  
+  theme_light() 
+
+suppressWarnings({
+  print(p1)
+  print(p2)
+})
+
+out.ToPrint <- data.frame(Date = out$date, `Observed Cumulative Mortality` = out$Observed, `Median Fitted/Predicted Mortality` = out$q5, 
+                          `Fitted/Predicted LB` = out$q1, `Fitted/Predicted UB` = out$q9) %>% filter(Date <= as.Date("2020-06-01"))
+kable(out.ToPrint, digits = 1)
+  
+}
+
+```
+

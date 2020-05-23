@@ -1,0 +1,25 @@
+---
+title: "COVID-19 Results - Index"
+author: "Grant Brown"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Daily Results:
+
+```{r, results='asis', echo=FALSE}
+
+rdirs <- setdiff(dir("./Results"), "placeholder")
+rdirs <- rdirs[grepl("Project", rdirs)]
+
+
+for (dr in rdirs){
+  cat(paste0(c("* [", gsub(".html", "",dr, fixed = TRUE), 
+               "](", paste0("./Results/", dr, ")")), collapse = ""))
+  cat("\n")
+}
+
+```
