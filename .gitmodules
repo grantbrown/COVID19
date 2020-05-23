@@ -1,0 +1,3 @@
+[submodule "Project/ABSEIR"]
+	path = Project/ABSEIR
+	url = https://github.com/grantbrown/ABSEIR.git
