@@ -12,7 +12,7 @@ for (dt in dts){
   outfileName <- paste0(c("Latest Projections - (", as.character(dt), ").html"),
                         collapse = "")
   outfileName <- paste0(rd, outfileName)
-  file.copy(infileName, outfileName)
+  file.copy(infileName, outfileName,overwrite = TRUE)
   file.remove(infileName)
   
 }

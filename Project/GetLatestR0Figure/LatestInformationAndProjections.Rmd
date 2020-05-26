@@ -20,6 +20,9 @@ library(gridExtra)
 
 
 resultDirectory <- "../../Results/"
+if (!dir.exists(resultDirectory)){
+  resultDirectory <- "/home/basefolder/Results/"
+}
 resultDir <- setdiff(dir(resultDirectory), "placeholder")
 
 ## Determine if we're supposed to be working in a specific folder, or grabbing the latest
@@ -228,12 +231,18 @@ suppressWarnings(
   print(p2)
 )
 
-library(knitr)
-out.ToPrint <- data.frame(Date = out$date, `Observed Cumulative Mortality` = out$Observed, `Median Fitted/Predicted Mortality` = out$q5, 
-                          `Fitted/Predicted LB` = out$q1, `Fitted/Predicted UB` = out$q9) %>% filter(Date <= as.Date("2020-06-01"))
+library(kableExtra )
 
-kable(out.ToPrint, digits = 1)
+out.joined <- out  %>% mutate(CIprnt = paste0(round(q5), " (", round(q1), ", ", round(q9), ")"))
 
+out.ToPrint <- select(out.joined, date, Observed, CIprnt) %>% filter(date <= maxPredDate)
+
+colnames(out.ToPrint) <- c("Date", "Observed Mortality)", "Predicted Mortality")
+
+kable(out.ToPrint, digits = 1,align = c("c"), caption = "Mortality: Latest") %>% 
+  kable_styling(bootstrap_option = c("striped", "condensed"), 
+                full_width = FALSE) 
+ 
 ```
 
 ## Comparison to May 02 Report {.tabset}
@@ -415,9 +424,18 @@ suppressWarnings({
   print(p2)
 })
 
-out.ToPrint <- data.frame(Date = out$date, `Observed Cumulative Mortality` = out$Observed, `Median Fitted/Predicted Mortality` = out$q5, 
-                          `Fitted/Predicted LB` = out$q1, `Fitted/Predicted UB` = out$q9) %>% filter(Date <= as.Date("2020-06-01"))
-kable(out.ToPrint, digits = 1)
+out.joined <- left_join(out, mutate(outFilt, latestY = Observed) %>% select(date, latestY), by = "date") %>%
+  mutate(ObservedPrnt = ifelse(is.na(Observed) & !is.na(latestY), paste0(latestY, "*"), Observed)) %>%
+  mutate(CIprnt = paste0(round(q5), " (", round(q1), ", ", round(q9), ")"))
+
+out.ToPrint <- select(out.joined, date, ObservedPrnt, CIprnt) %>% filter(date <= as.Date("2020-06-01"))
+
+
+colnames(out.ToPrint) <- c("Date", "Observed Mortality)", "Predicted Mortality")
+
+kable(out.ToPrint, digits = 1,align = c("c"), caption = "Mortality: Latest") %>% 
+  kable_styling(bootstrap_option = c("striped", "condensed"), 
+                full_width = FALSE) 
   
 }
 
