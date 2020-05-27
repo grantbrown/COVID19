@@ -41,6 +41,8 @@ COPY ./Project /home/Analysis
 RUN cd /home/Analysis/Data && rm -rf ./COVID-19 && git clone https://github.com/CSSEGISandData/COVID-19.git COVID-19
 RUN cd /home/Analysis/Data && rm -rf ./covid-19-data && git clone https://github.com/nytimes/covid-19-data.git covid-19-data
 
+RUN cd /home && Rscript installPkg.R kableExtra
+
 
 #RUN eval "cd  /home/Analysis && $(R CMD BATCH ./compile.R)"
 #RUN /bin/bash
