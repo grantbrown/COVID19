@@ -259,8 +259,7 @@ if (rprtDate == as.Date("2020-05-02")){
   cat("<strong>Comparison omitted - report date is past June 01 and comparison is not meaningful.</strong>") 
 } else if (rprtDate <= as.Date("2020-06-01")){
   
-resultDirectory <- "../../Results/2020-05-02/results/"
-rwd <- resultDirectory 
+rwd <- paste0(resultDirectory, "2020-05-02/results/")
 
 resultFiles <- paste0(rwd,"/", dir(rwd)[grepl("iowa", dir(rwd))])
 analysisResults <- lapply(resultFiles, function(rf){
