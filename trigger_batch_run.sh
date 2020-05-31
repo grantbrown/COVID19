@@ -6,6 +6,8 @@ docker run -v ${PWD}/artifacts:/home/Analysis/artifacts -t covid1 /home/Analysis
 wait
 rm -f .RData
 wait
+echo "REBUILDING IMAGE" && \
+docker build -t covid1 ./ && \
 docker run -v ${PWD}/:/home/basefolder -t covid1 /home/Analysis/GetLatestR0Figure/renderR0.sh
 rm -f .RData
 R CMD BATCH --no-save finalize_results.R

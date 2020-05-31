@@ -59,6 +59,11 @@ if (length(stateCenIdx) == 0){
 }
 
 statePop <- censusData[stateCenIdx,]$`2019`
+## Add Google Mobility data
+
+#mobility <- read.csv("https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv?cachebust=b3ad67084527db32")
+
+
 
 if (file.exists(cacheFileName)){
   print("File Already Exists")
