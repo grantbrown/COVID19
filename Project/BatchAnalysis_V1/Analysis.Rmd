@@ -104,6 +104,13 @@ system(paste0("Rscript AnalyzeNYT.R -s 16 -r 0.02 -w 6 -d 2020-03-17 -t 4 -o ./r
 # Iowa
 system(paste0("Rscript AnalyzeNYT.R -s 16 -r 0.02 -w 6 -d 2020-04-04 -t 4 -o ./results/iowa_4_4.rmd -b ", debug*1, " -z ", cores))
 
+# Iowa (workplace mobility)
+system(paste0("Rscript AnalyzeNYT.R -s 16 -r 0.02 -w 6 -d 2020-04-04 -t 6 -o ./results/iowa_workplace.rmd -b ", debug*1, " -z ", cores))
+
+# Iowa (retail/rec mobility)
+system(paste0("Rscript AnalyzeNYT.R -s 16 -r 0.02 -w 6 -d 2020-04-04 -t 7 -o ./results/iowa_retail.rmd -b ", debug*1, " -z ", cores))
+
+
 
 ## Spline basis
 
@@ -134,19 +141,21 @@ system(paste0("Rscript AnalyzeNYT.R -s 16 -r 0.02 -w 6 -d 2020-04-04 -t 5 -o ./r
 #locations <- c("Hubei", "Norway", "Illinois", "Washington", "New York", "Minnesota", "Iowa")
 #files <- paste0("./results/", c("hubei.rmd", "norway.rmd", "illinois.rmd", "washington.rmd", "newyork.rmd", "minnesota.rmd", "iowa.rmd"))
 
-locations <- c("Illinois", "Washington", "Minnesota", "Iowa (3-17)", "Iowa (4-4)",
+locations <- c("Illinois", "Washington", "Minnesota", "Iowa (3-17)", "Iowa (4-4)","Iowa (workplace mobility)", "Iowa (retail mobility)",
                "Illinois (Spline Model)", "Washington (Spline Model)", "Minnesota (Spline Model)", "Iowa (3-17, Spline Model)", "Iowa (4-4, Spline Model)")
 files <- paste0("./results/", c("illinois.rmd", 
                                 "washington.rmd",
                                 "minnesota.rmd", 
                                 "iowa.rmd", 
-                                "iowa_4_4.rmd",
+                                "iowa_4_4.rmd",               
+                                "iowa_workplace.rmd", 
+                                "iowa_retail.rmd",
                                 "illinois_spline.rmd", 
                                 "washington_spline.rmd",
                                 "minnesota_spline.rmd", 
                                 "iowa_spline.rmd", 
                                 "iowa_4_4_spline.rmd"))
-intervTypes <- c(rep(4,5), rep(5,5))
+intervTypes <- c(rep(4,5), c(6,7), rep(5,5))
 
 preanalyses <- lapply(1:length(locations), function(i){
   e <- new.env()

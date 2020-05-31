@@ -61,10 +61,6 @@ if (length(stateCenIdx) == 0){
 statePop <- censusData[stateCenIdx,]$`2019`
 ## Add Google Mobility data
 
-#mobility <- read.csv("https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv?cachebust=b3ad67084527db32")
-
-
-
 if (file.exists(cacheFileName)){
   print("File Already Exists")
   
@@ -116,6 +112,69 @@ if (file.exists(cacheFileName)){
     
     sharedBasis <- bs(0:150, degree = 4) 
     X <- as.matrix(cbind(1,predict(sharedBasis,c1)))
+    
+  } else if (intervType == 6){
+    # workplace mobility
+    
+    download.file(url = "https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv?cachebust=6d352e35dcffafce",
+                  destfile = "mobility.csv")
+    
+    mobility <- read.csv("mobility.csv")
+    mobility <- filter(mobility, country_region == "United States" & sub_region_1 == "Iowa") %>% 
+      group_by(date) %>%
+      summarize(parks_mean = mean(parks_percent_change_from_baseline, na.rm=TRUE),
+                retail_mean = mean(retail_and_recreation_percent_change_from_baseline, na.rm=TRUE), 
+                transit_mean = mean(transit_stations_percent_change_from_baseline, na.rm=TRUE),
+                residential_mean = mean(residential_percent_change_from_baseline, na.rm=TRUE),
+                grocery_mean = mean(grocery_and_pharmacy_percent_change_from_baseline, na.rm=TRUE),
+                workplace_mean = mean(workplaces_percent_change_from_baseline, na.rm=TRUE))
+    
+    # Throw away last few days of mobility
+    mobility <- filter(mobility, as.Date(date) <= as.Date(max(date))-3)
+    
+    # Naiive assumption - assume that, moving forward, mobility stays at the previous week average. 
+    X <- cbind(1, rep(NA, nrow(stateDataFiltered)))
+    lastWkAvg <- mean(mobility$workplace_mean[order(mobility$date,decreasing = TRUE)][1:7])
+    for (i in 1:nrow(X)){
+      if (stateDataFiltered$date[i] %in% as.Date(mobility$date)){
+        idx <- which(as.Date(mobility$date)==stateDataFiltered$date[i]) 
+        X[i,2] <- mobility$workplace_mean[idx]
+      } else{
+        X[i,2] <- lastWkAvg
+      }
+    }
+    
+  } else if (intervType == 7){
+    # Rec mobility
+    
+    download.file(url = "https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv?cachebust=6d352e35dcffafce",
+                  destfile = "mobility.csv")
+    
+    mobility <- read.csv("mobility.csv")
+    mobility <- filter(mobility, country_region == "United States" & sub_region_1 == "Iowa") %>% 
+      group_by(date) %>%
+      summarize(parks_mean = mean(parks_percent_change_from_baseline, na.rm=TRUE),
+                retail_mean = mean(retail_and_recreation_percent_change_from_baseline, na.rm=TRUE), 
+                transit_mean = mean(transit_stations_percent_change_from_baseline, na.rm=TRUE),
+                residential_mean = mean(residential_percent_change_from_baseline, na.rm=TRUE),
+                grocery_mean = mean(grocery_and_pharmacy_percent_change_from_baseline, na.rm=TRUE),
+                workplace_mean = mean(workplaces_percent_change_from_baseline, na.rm=TRUE))
+    
+    # Throw away last few days of mobility
+    mobility <- filter(mobility, as.Date(date) <= as.Date(max(date))-3)
+    
+    
+    # Naiive assumption - assume that, moving forward, mobility stays at the previous week average. 
+    X <- cbind(1, rep(NA, nrow(stateDataFiltered)))
+    lastWkAvg <- mean(mobility$retail_mean[order(mobility$date,decreasing = TRUE)][1:7])
+    for (i in 1:nrow(X)){
+      if (stateDataFiltered$date[i] %in% as.Date(mobility$date)){
+        idx <- which(as.Date(mobility$date)==stateDataFiltered$date[i]) 
+        X[i,2] <- mobility$retail_mean[idx]
+      } else{
+        X[i,2] <- lastWkAvg
+      }
+    }
     
   }
   
