@@ -119,7 +119,7 @@ if (file.exists(cacheFileName)){
     download.file(url = "https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv?cachebust=6d352e35dcffafce",
                   destfile = "mobility.csv")
     
-    mobility <- read.csv("mobility.csv")
+    mobility <- read.csv("mobility.csv", stringsAsFactors = FALSE)
     mobility <- filter(mobility, country_region == "United States" & sub_region_1 == "Iowa") %>% 
       group_by(date) %>%
       summarize(parks_mean = mean(parks_percent_change_from_baseline, na.rm=TRUE),
@@ -150,7 +150,7 @@ if (file.exists(cacheFileName)){
     download.file(url = "https://www.gstatic.com/covid19/mobility/Global_Mobility_Report.csv?cachebust=6d352e35dcffafce",
                   destfile = "mobility.csv")
     
-    mobility <- read.csv("mobility.csv")
+    mobility <- read.csv("mobility.csv", stringsAsFactors = FALSE)
     mobility <- filter(mobility, country_region == "United States" & sub_region_1 == "Iowa") %>% 
       group_by(date) %>%
       summarize(parks_mean = mean(parks_percent_change_from_baseline, na.rm=TRUE),

@@ -8,10 +8,10 @@ rm -f .RData
 wait
 echo "REBUILDING IMAGE" && \
 docker build -t covid1 ./ && \
-docker run -v ${PWD}/:/home/basefolder -t covid1 /home/Analysis/GetLatestR0Figure/renderR0.sh
 rm -f .RData
 R CMD BATCH --no-save finalize_results.R
 wait
+docker run -v ${PWD}/:/home/basefolder -t covid1 /home/Analysis/GetLatestR0Figure/renderR0.sh
 docker run -v ${PWD}/:/home/basefolder -t covid1 /home/Analysis/BatchAnalysis_V1/renderIdx.sh
 wait
 rm -f .RData
