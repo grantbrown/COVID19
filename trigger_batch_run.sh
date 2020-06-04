@@ -12,6 +12,7 @@ rm -f .RData
 R CMD BATCH --no-save finalize_results.R
 wait
 docker run -v ${PWD}/:/home/basefolder -t covid1 /home/Analysis/GetLatestR0Figure/renderR0.sh
+wait
 docker run -v ${PWD}/:/home/basefolder -t covid1 /home/Analysis/BatchAnalysis_V1/renderIdx.sh
 wait
 rm -f .RData
