@@ -14,6 +14,7 @@ suppressMessages({
 library(knitr)
 library(dplyr)
 library(ggplot2)
+library(kableExtra )
 library(gridExtra)
 })
 
@@ -48,6 +49,7 @@ analysisResults <- lapply(resultFiles, function(rf){
 ```{r,echo=FALSE, results='asis'}
 
 cat(paste0("<h1>Using report compiled on: ", rprtDate, "</h1>\n"))
+set.seed(as.numeric(rprtDate))
 ```
 
 ## Introduction
@@ -231,7 +233,6 @@ suppressWarnings(
   print(p2)
 )
 
-library(kableExtra )
 
 out.joined <- out  %>% mutate(CIprnt = paste0(round(q5), " (", round(q1), ", ", round(q9), ")"))
 
@@ -252,7 +253,7 @@ subsequently reported counts.
 
 ### Reproductive Number Projections 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE,results='asis'}
 if (rprtDate == as.Date("2020-05-02")){
   cat("<strong>Comparison omitted - report date is the same as the comparison report.</strong>") 
 }else if (rprtDate > as.Date("2020-06-01")){
@@ -332,7 +333,7 @@ suppressWarnings({
 ### Mortality Projections
 
 
-```{r,echo=FALSE}
+```{r,echo=FALSE,results='asis'}
 
 ## Get mortality projections 
 if (rprtDate == as.Date("2020-05-02")){
@@ -432,10 +433,18 @@ out.ToPrint <- select(out.joined, date, ObservedPrnt, CIprnt) %>% filter(date <=
 
 colnames(out.ToPrint) <- c("Date", "Observed Mortality)", "Predicted Mortality")
 
-kable(out.ToPrint, digits = 1,align = c("c"), caption = "Mortality: Latest") %>% 
+  
+}
+
+```
+
+
+```{r, echo = FALSE}
+# Show mortality table if valid
+if (rprtDate > as.Date("2020-05-02") && rprtDate <= as.Date("2020-06-01")){
+  kable(out.ToPrint, digits = 1,align = c("c"), caption = "Mortality: Latest") %>% 
   kable_styling(bootstrap_option = c("striped", "condensed"), 
                 full_width = FALSE) 
-  
 }
 
 ```
