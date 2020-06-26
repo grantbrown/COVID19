@@ -28,7 +28,7 @@ make_option(c("-b", "--debug"), type = "character",
             default = "0", help = "Debug?",
             metavar="character"),
 make_option(c("-z", "--cores"), type = "character", 
-            default = "8", help = "cores",
+            default = "NA", help = "cores",
             metavar="character")
 )
 
@@ -44,7 +44,11 @@ intervType <- as.integer(opt$type)
 cacheFileName <- opt$outfile
 debug <- as.numeric(opt$debug) > 0
 cacheFileName <- opt$outfile 
-cores <- as.integer(opt$cores)
+if (opt$cores == "NA"){
+  cores <- parallel::detectCores() - 1
+} else {
+  cores <- as.integer(opt$cores)
+}
 
 
 
