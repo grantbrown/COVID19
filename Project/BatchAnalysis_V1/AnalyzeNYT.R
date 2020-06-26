@@ -114,7 +114,7 @@ if (file.exists(cacheFileName)){
   } else if (intervType == 5){
     c1 <- cumsum(1*((stateDataFiltered$date >= interventionDate)))
     
-    sharedBasis <- bs(0:150, degree = 4) 
+    sharedBasis <- bs(0:200, degree = 5) 
     X <- as.matrix(cbind(1,predict(sharedBasis,c1)))
     
   } else if (intervType == 6){
@@ -241,7 +241,7 @@ if (file.exists(cacheFileName)){
   sampling_control = SamplingControl(seed = 123124, 
                                      n_cores = cores,
                                      algorithm="Beaumont2009",
-                                     list(init_batch_size = 1000000,
+                                     list(init_batch_size = 2500000,
                                           batch_size = 100000,
                                           epochs = 2,
                                           max_batches = 2,
@@ -257,7 +257,7 @@ if (file.exists(cacheFileName)){
                             transition_priors = Transition_priors,
                             initial_value_container,
                             sampling_control,
-                            samples = 50,
+                            samples = 150,
                             verbose = 2)
   
   
